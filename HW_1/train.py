@@ -7,6 +7,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import argparse
+import visdom
 from ResNet import ResNet18
 from torch.utils.data import DataLoader
 
