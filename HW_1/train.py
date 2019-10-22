@@ -1,6 +1,3 @@
-import cv2
-import time
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -70,6 +67,10 @@ testloader = DataLoader(
     )
 # label for Cifar-10
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+viz = visdom.Visdom(env='train-mnist')
+viz.image(torchvision.utils.make_grid(next(iter(train_dataloader))[0], nrow=8), win='train-image')
+
 
 # build the model : ResNet
 net = ResNet18().to(device)
