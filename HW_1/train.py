@@ -14,10 +14,10 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # params
-EPOCH = 50
+EPOCH = 200
 pre_epoch = 0
 BATCH_SIZE = 128
-LR = 0.1
+LR = 0.001
 
 
 # 参数设置,使得我们能够手动输入命令行参数，就是让风格变得和Linux命令行差不多
@@ -32,12 +32,13 @@ transform_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    transforms.Normalize((0.485.456, 0.406), (0.229, 0.224, 0.225)),
 ])
+
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    transforms.Normalize((0.485.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 
