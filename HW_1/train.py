@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # params
-EPOCH = 30
+EPOCH = 50
 pre_epoch = 0
 BATCH_SIZE = 128
 LR = 0.1
@@ -78,17 +78,22 @@ optimizer = optim.SGD(net.parameters(), lr=LR, momentum=0.9, weight_decay=5e-4)
 
 # 训练
 if __name__ == "__main__":
+    loss_win = viz.line(np.arange(10))
+    acc_win = viz.line(X=np.column_stack((np.array(0), np.array(0))),
+                        Y=np.column_stack((np.array(0), np.array(0))))
     best_acc = 85
     print("Start Training the model : Resnet-18  Dataset: Cifar-10")  # 定义遍历数据集的次数
     with open("acc.txt", "w") as f:
         with open("log.txt", "w")as f2:
             for epoch in range(pre_epoch, EPOCH):
+                iter_count = 0
                 print('\nEpoch: %d' % (epoch + 1))
                 net.train()
                 sum_loss = 0.0
-                correct = 0.0
-                total = 0.0
+                tr_correct = 0.0
+                tr_total = 0.0
                 for i, data in enumerate(trainloader, 0):
+                    iter_count += 1
                     length = len(trainloader)
                     inputs, labels = data
                     inputs, labels = inputs.to(device), labels.to(device)
@@ -103,20 +108,21 @@ if __name__ == "__main__":
                     # 每训练1个batch打印一次loss和准确率
                     sum_loss += loss.item()
                     _, predicted = torch.max(outputs.data, 1)
-                    total += labels.size(0)
-                    correct += predicted.eq(labels.data).cpu().sum()
+                    tr_total += labels.size(0)
+                    tr_correct += predicted.eq(labels.data).cpu().sum()
+                    tr_acc = 100. * tr_correct / tr_total
                     print('[epoch:%d, iter:%d] Loss: %.03f | Acc: %.3f%% '
-                          % (epoch + 1, (i + 1 + epoch * length), sum_loss / (i + 1), 100. * correct / total))
+                          % (epoch + 1, (i + 1 + epoch * length), sum_loss / (i + 1), tr_acc))
                     f2.write('%03d  %05d |Loss: %.03f | Acc: %.3f%% '
-                          % (epoch + 1, (i + 1 + epoch * length), sum_loss / (i + 1), 100. * correct / total))
+                          % (epoch + 1, (i + 1 + epoch * length), sum_loss / (i + 1), tr_acc))
                     f2.write('\n')
                     f2.flush()
 
                 # 每训练完一个epoch测试一下准确率
                 print("Waiting Test!")
                 with torch.no_grad():
-                    correct = 0
-                    total = 0
+                    ts_correct = 0
+                    ts_total = 0
                     for data in testloader:
                         net.eval()
                         images, labels = data
@@ -124,20 +130,32 @@ if __name__ == "__main__":
                         outputs = net(images)
                         # 取得分最高的那个类 (outputs.data的索引号)
                         _, predicted = torch.max(outputs.data, 1)
-                        total += labels.size(0)
-                        correct += (predicted == labels).sum()
-                    print('测试分类准确率为：%.3f%%' % (100 * correct / total))
-                    acc = 100. * correct / total
+                        ts_total += labels.size(0)
+                        ts_correct += (predicted == labels).sum()
+                    ts_acc = 100. * ts_correct /ts_total
+                    print('测试分类准确率为：%.3f%%' % (ts_acc))
                     # 将每次测试结果实时写入acc.txt文件中
                     print('Saving model......')
                     torch.save(net.state_dict(), '%s/net_%03d.pth' % (args.outf, epoch + 1))
-                    f.write("EPOCH=%03d,Accuracy= %.3f%%" % (epoch + 1, acc))
+                    f.write("EPOCH=%03d,Accuracy= %.3f%%" % (epoch + 1, ts_acc))
                     f.write('\n')
                     f.flush()
                     # 记录最佳测试分类准确率并写入best_acc.txt文件中
                     if acc > best_acc:
                         f3 = open("best_acc.txt", "w")
-                        f3.write("EPOCH=%d,best_acc= %.3f%%" % (epoch + 1, acc))
+                        f3.write("EPOCH=%d,best_acc= %.3f%%" % (epoch + 1, ts_acc))
                         f3.close()
                         best_acc = acc
-            print("Training Finished, TotalEPOCH=%d" % EPOCH)
+                   if epoch == 0:
+                        viz.line(Y=np.array([tr_loss]), X=np.array([iter_count]), update='replace', win=loss_win)
+                        viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
+                                 X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
+                                 win=acc_win, update='replace',
+                                 opts=dict(legned=['Train_acc', 'Val_acc']))
+
+                    else:
+                        viz.line(Y=np.array([tr_loss]), X=np.array([iter_count]), update='append', win=loss_win)
+                        viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
+                                 X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
+                                 win=acc_win, update='append')
+     print("Training Finished, TotalEPOCH=%d" % EPOCH)
