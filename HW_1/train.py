@@ -80,21 +80,26 @@ optimizer = optim.SGD(net.parameters(), lr=LR, momentum=0.9, weight_decay=5e-4)
 if __name__ == "__main__":
     viz = visdom.Visdom(env='train-CIFAR10')
     viz.image(torchvision.utils.make_grid(next(iter(trainloader))[0], nrow=8), win='train-image')
-    loss_win = viz.line(np.arange(10))
-    acc_win = viz.line(X=np.column_stack((np.array(0), np.array(0))),
-                        Y=np.column_stack((np.array(0), np.array(0))))
+    #loss_win = viz.line(np.arange(10))
+    #acc_win = viz.line(X=np.column_stack((np.array(0), np.array(0))),
+    #                    Y=np.column_stack((np.array(0), np.array(0))))
+    #
     best_acc = 85
     print("Start Training the model : Resnet-18  Dataset: Cifar-10")  # 定义遍历数据集的次数
     with open("acc.txt", "w") as f:
         with open("log.txt", "w")as f2:
+            global_step = 0
+            batch_step = 0
             for epoch in range(pre_epoch, EPOCH):
                 iter_count = 0
+                global_step += 1
                 print('\nEpoch: %d' % (epoch + 1))
                 net.train()
                 sum_loss = 0.0
                 tr_correct = 0.0
                 tr_total = 0.0
                 for i, data in enumerate(trainloader, 0):
+                    batch_step += 1
                     iter_count += 1
                     length = len(trainloader)
                     inputs, labels = data
@@ -119,6 +124,7 @@ if __name__ == "__main__":
                           % (epoch + 1, (i + 1 + epoch * length), sum_loss / (i + 1), tr_acc))
                     f2.write('\n')
                     f2.flush()
+                    viz.line(Y=np.array([sum_loss / iter_count]), X=np.array([batch_step]), update='replace' if batch_step == 1 else 'append', win="loss_win")
 
                 # 每训练完一个epoch测试一下准确率
                 print("Waiting Test!")
@@ -149,16 +155,9 @@ if __name__ == "__main__":
                         f3.close()
                         best_acc = ts_acc
 
-                    if epoch == 0:
-                        viz.line(Y=np.array([sum_loss]), X=np.array([iter_count]), update='replace', win=loss_win)
-                        viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
-                                X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
-                                win=acc_win, update='replace',
-                                opts=dict(legned=['Train_acc', 'Val_acc']))
+                    viz.line(Y=np.column_stack((np.array([tr_acc.item()]), np.array([ts_acc.item()]))),
+                             X=np.column_stack((np.array([global_step]), np.array([global_step]))),
+                             win="acc_win", update='replace' if epoch == 0 else 'append',
+                             opts=dict(legned=['Train_acc', 'Val_acc']))
 
-                    else:
-                        viz.line(Y=np.array([sum_loss]), X=np.array([iter_count]), update='append', win=loss_win)
-                        viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
-                                 X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
-                                 win=acc_win, update='append')
 
