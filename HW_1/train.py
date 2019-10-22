@@ -7,6 +7,7 @@ import argparse
 import visdom
 from ResNet import ResNet18
 from torch.utils.data import DataLoader
+import numpy as np
 
 # GPU/CPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -30,13 +31,13 @@ transform_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize((0.485.456, 0.406), (0.229, 0.224, 0.225)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.485.456, 0.406), (0.229, 0.224, 0.225)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 
@@ -68,10 +69,6 @@ testloader = DataLoader(
 # label for Cifar-10
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-viz = visdom.Visdom(env='train-mnist')
-viz.image(torchvision.utils.make_grid(next(iter(train_dataloader))[0], nrow=8), win='train-image')
-
-
 # build the model : ResNet
 net = ResNet18().to(device)
 
@@ -81,6 +78,8 @@ optimizer = optim.SGD(net.parameters(), lr=LR, momentum=0.9, weight_decay=5e-4)
 
 # 训练
 if __name__ == "__main__":
+    viz = visdom.Visdom(env='train-CIFAR10')
+    viz.image(torchvision.utils.make_grid(next(iter(trainloader))[0], nrow=8), win='train-image')
     loss_win = viz.line(np.arange(10))
     acc_win = viz.line(X=np.column_stack((np.array(0), np.array(0))),
                         Y=np.column_stack((np.array(0), np.array(0))))
@@ -144,21 +143,22 @@ if __name__ == "__main__":
                     f.write('\n')
                     f.flush()
                     # 记录最佳测试分类准确率并写入best_acc.txt文件中
-                    if acc > best_acc:
+                    if ts_acc > best_acc:
                         f3 = open("best_acc.txt", "w")
                         f3.write("EPOCH=%d,best_acc= %.3f%%" % (epoch + 1, ts_acc))
                         f3.close()
-                        best_acc = acc
-                   if epoch == 0:
-                        viz.line(Y=np.array([tr_loss]), X=np.array([iter_count]), update='replace', win=loss_win)
+                        best_acc = ts_acc
+
+                    if epoch == 0:
+                        viz.line(Y=np.array([sum_loss]), X=np.array([iter_count]), update='replace', win=loss_win)
                         viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
-                                 X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
-                                 win=acc_win, update='replace',
-                                 opts=dict(legned=['Train_acc', 'Val_acc']))
+                                X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
+                                win=acc_win, update='replace',
+                                opts=dict(legned=['Train_acc', 'Val_acc']))
 
                     else:
-                        viz.line(Y=np.array([tr_loss]), X=np.array([iter_count]), update='append', win=loss_win)
+                        viz.line(Y=np.array([sum_loss]), X=np.array([iter_count]), update='append', win=loss_win)
                         viz.line(Y=np.column_stack((np.array([tr_acc]), np.array([ts_acc]))),
                                  X=np.column_stack((np.array([iter_count]), np.array([iter_count]))),
                                  win=acc_win, update='append')
-     print("Training Finished, TotalEPOCH=%d" % EPOCH)
+
