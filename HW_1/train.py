@@ -80,10 +80,6 @@ optimizer = optim.SGD(net.parameters(), lr=LR, momentum=0.9, weight_decay=5e-4)
 if __name__ == "__main__":
     viz = visdom.Visdom(env='train-CIFAR10')
     viz.image(torchvision.utils.make_grid(next(iter(trainloader))[0], nrow=8), win='train-image')
-    #loss_win = viz.line(np.arange(10))
-    #acc_win = viz.line(X=np.column_stack((np.array(0), np.array(0))),
-    #                    Y=np.column_stack((np.array(0), np.array(0))))
-    #
     best_acc = 85
     print("Start Training the model : Resnet-18  Dataset: Cifar-10")  # 定义遍历数据集的次数
     with open("acc.txt", "w") as f:

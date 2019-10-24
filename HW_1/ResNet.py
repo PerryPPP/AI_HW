@@ -5,6 +5,8 @@ class ResidualBlock(nn.Module):
     def __init__(self, inchannel, outchannel, stride=1):
         super(ResidualBlock, self).__init__()
         self.left = nn.Sequential(
+            nn.BatchNorm2d(inchannel),
+            nn.ReLU(inplace=True),
             nn.Conv2d(inchannel, outchannel, kernel_size=3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(outchannel),
             nn.ReLU(inplace=True),
@@ -21,7 +23,7 @@ class ResidualBlock(nn.Module):
     def forward(self, x):
         out = self.left(x)
         out += self.shortcut(x)
-        out = F.relu(out)
+        #out = F.relu(out)
         return out
 
 class ResNet(nn.Module):
@@ -38,6 +40,7 @@ class ResNet(nn.Module):
         self.layer3 = self.make_layer(ResidualBlock, 256, 2, stride=2)
         self.layer4 = self.make_layer(ResidualBlock, 512, 2, stride=2)
         self.fc = nn.Linear(512, num_classes)
+        #self.result = []
 
     def make_layer(self, block, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)   #strides=[1,1]
@@ -49,13 +52,28 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
+        #result[0] conv1(x)
+        #self.result.append(out)
         out = self.layer1(out)
+        #result[1] layer1
+        #self.result.append(out)
         out = self.layer2(out)
+        #result[2] layer2
+        #self.result.append(out)
         out = self.layer3(out)
+        #result[3] layer3
+        #self.result.append(out)
         out = self.layer4(out)
+        #result[4] layer4
+        #self.result.append(out)
         out = F.avg_pool2d(out, 4)
+        #result[5] avr_pool
+        #self.result.append(out)
         out = out.view(out.size(0), -1)
+        #self.result.append(out)
         out = self.fc(out)
+        #self.result.append(out)
+        #return result
         return out
 
 
